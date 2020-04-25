@@ -94,7 +94,7 @@ def timer10s():
     print(">" + str(it))
 
     if (it == 6*timer_interval): # 6 = 1min / 60 = 10min
-        print("ok ------------------- 10 min")
+        print("ok ---- 10 min")
         solar_adc()
         show_temp()
         it = 0
@@ -157,8 +157,8 @@ bmp = bmp_init()
 temp = show_temp()
 press = bmp.pressure
 
-w()
 try:
+   w()
    print("test influx.write: ", temp, press)
    influx.write("octopuslab", temperature = temp, pressure= press, solar20 = 123, solar21 = 123, solarBar = 0)
 except Exception as e:
@@ -168,7 +168,6 @@ except Exception as e:
 # rtc = RTC() # real time
 tim1 = Timer(0)     # for main 10 sec timer
 timer_init()
-
 
 # --- run ---
 print("--- run --- RAM free: " + str(mem_free()))
