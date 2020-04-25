@@ -2,3 +2,10 @@
 simple solar regulator - Micropython project
 
 v0.2 (2020)
+
+<code>
+from config import Config
+conf = Config("solar2")
+conf.set("influx_url","your.influx.net")
+conf.save()
+</code>
