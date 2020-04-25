@@ -15,6 +15,7 @@ from util.analog import Analog
 from util.iot import Relay
 from util.octopus import w
 from machine import Pin, RTC, Timer
+from config import Config
 from util.database.influxdb import InfluxDB
 from gc import mem_free
 
@@ -63,7 +64,13 @@ def solar_adc():
 
     valSdiff = valS1 - valS2
     d7.show(valSdiff)
-    sleep(2)
+
+    if valSdiff < treshold:
+        ws.color((0,128,0))
+    else:
+        ws.color((128,0,0))
+    sleep(1)
+    ws.color((0,0,0))
     d7.show("")
     sleep(1)
 
@@ -86,7 +93,7 @@ def timer10s():
     it = it + 1
     print(">" + str(it))
 
-    if (it == 6*minute): # 6 = 1min / 60 = 10min
+    if (it == 6*timer_interval): # 6 = 1min / 60 = 10min
         print("ok ------------------- 10 min")
         solar_adc()
         show_temp()
@@ -104,6 +111,7 @@ def show_temp():
     d7.show(str(t)+"c")
     sleep(2)
     d7.show("")
+    return t
 
 
 @led_button.on_press
@@ -111,6 +119,22 @@ def on_press_top_button():
     print("on_press_top_button")
     solar_adc()
     show_temp()
+
+
+print("config/solar.json -->")
+config = Config("solar2") # = config/solar.json
+try:
+    timer_interval = config.get("timer_interval") # minutes
+    treshold = config.get("treshold") # RAW adc difference
+    print("setup: ", timer_interval, treshold)
+    iurl = config.get("influx_url")
+    idb = config.get("influx_db")
+    iusr = config.get("influx_usr")
+    ipsw = config.get("influx_psw")
+    influx = InfluxDB(iurl, idb, iusr, ipsw)
+    print("influx: ", iurl, idb)
+except Exception as e:
+    print("config Exception: {0}".format(e))
 
 
 # --- test ---
@@ -130,11 +154,22 @@ d7.show("")
 
 print("test: bmp")
 bmp = bmp_init()
-show_temp()
+temp = show_temp()
+press = bmp.pressure
 
 w()
+try:
+   print("test influx.write: ", temp, press)
+   influx.write("octopuslab", temperature = temp, pressure= press, solar20 = 123, solar21 = 123, solarBar = 0)
+except Exception as e:
+    print("influx test Exception: {0}".format(e))
 
-rtc = RTC() # real time
+
+post_url="https://parallelgarden.surikata.info:8086/write?db=octopuslab&u=octopus&p=chobotni4ky"
+post_data="solar,place=octopuslab,id=1 keepalive={0},solarVolt={1}"
+
+
+# rtc = RTC() # real time
 tim1 = Timer(0)     # for main 10 sec timer
 timer_init()
 
