@@ -165,10 +165,6 @@ except Exception as e:
     print("influx test Exception: {0}".format(e))
 
 
-post_url="https://parallelgarden.surikata.info:8086/write?db=octopuslab&u=octopus&p=chobotni4ky"
-post_data="solar,place=octopuslab,id=1 keepalive={0},solarVolt={1}"
-
-
 # rtc = RTC() # real time
 tim1 = Timer(0)     # for main 10 sec timer
 timer_init()
