@@ -1,0 +1,8 @@
+{
+"influx_url": "https://your.influx", 
+"timer_interval": 2, 
+"treshold": 123,
+"influx_db": "DB", 
+"influx_usr": "USER"
+"influx_psw": "PSW", 
+}
