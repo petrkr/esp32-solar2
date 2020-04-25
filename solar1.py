@@ -3,8 +3,8 @@ import urequests
 import time
 from machine import ADC, Pin, reset
 
-post_url="https://your.influx.net:8086/write?db=octopuslab&u=usr&p=psw"
-post_data="solar,place=octopuslab,id=1 keepalive={0},solarVolt={1}"
+post_url="https://your.influx.net:8086/write?db=octopuslab&u=USR&p=PSW"
+post_data="solar,place=DB,id=1 keepalive={0},solarVolt={1}"
 
 print("Press CTRL+C to skip booting")
 for _ in range(0,3):
@@ -13,7 +13,7 @@ for _ in range(0,3):
 
 net = network.WLAN()
 net.active(1)
-net.connect("UPCDC21985", "fuu2rFefzw6t")
+net.connect("SSID", "SPW")
 
 keepalive=0
 errorcount=0
@@ -28,6 +28,7 @@ def wait_connect():
 
         if retry > 30:
             break
+            
 
 def sendData(keepalive, solarRaw):
     global errorcount
