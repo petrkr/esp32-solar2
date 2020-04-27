@@ -94,7 +94,7 @@ def timer10s():
     print(">" + str(it))
 
     if (it == 6*timer_interval): # 6 = 1min / 60 = 10min
-        print("ok ---- 10 min")
+        print("ok ------------------- 10 min")
         solar_adc()
         show_temp()
         it = 0
@@ -131,7 +131,7 @@ try:
     idb = config.get("influx_db")
     iusr = config.get("influx_usr")
     ipsw = config.get("influx_psw")
-    influx = InfluxDB(iurl, idb, iusr, ipsw)
+    influx = InfluxDB(iurl, idb, iusr, ipsw, "solar2", place="lab")
     print("influx: ", iurl, idb)
 except Exception as e:
     print("config Exception: {0}".format(e))
@@ -157,17 +157,22 @@ bmp = bmp_init()
 temp = show_temp()
 press = bmp.pressure
 
+w()
 try:
-   w()
    print("test influx.write: ", temp, press)
    influx.write("octopuslab", temperature = temp, pressure= press, solar20 = 123, solar21 = 123, solarBar = 0)
 except Exception as e:
     print("influx test Exception: {0}".format(e))
 
 
+post_url="https://parallelgarden.surikata.info:8086/write?db=octopuslab&u=octopus&p=chobotni4ky"
+post_data="solar,place=octopuslab,id=1 keepalive={0},solarVolt={1}"
+
+
 # rtc = RTC() # real time
 tim1 = Timer(0)     # for main 10 sec timer
 timer_init()
+
 
 # --- run ---
 print("--- run --- RAM free: " + str(mem_free()))
