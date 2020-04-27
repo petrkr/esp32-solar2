@@ -14,7 +14,8 @@ from util.octopus import disp7_init
 from util.analog import Analog
 from util.iot import Relay
 from util.octopus import w
-from machine import Pin, RTC, Timer
+from machine import Pin, Timer
+# from machine import RTC
 from config import Config
 from util.database.influxdb import InfluxDB
 from gc import mem_free
@@ -163,10 +164,6 @@ try:
    influx.write("octopuslab", temperature = temp, pressure= press, solar20 = 123, solar21 = 123, solarBar = 0)
 except Exception as e:
     print("influx test Exception: {0}".format(e))
-
-
-post_url="https://parallelgarden.surikata.info:8086/write?db=octopuslab&u=octopus&p=chobotni4ky"
-post_data="solar,place=octopuslab,id=1 keepalive={0},solarVolt={1}"
 
 
 # rtc = RTC() # real time
