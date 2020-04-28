@@ -1,25 +1,29 @@
-# octopusLAB solar regulator v0.21 - 25.4.2020
+# octopusLAB solar regulator 
 # The MIT License (MIT)
 # Copyright (c) 2017-2020 Jan Copak, Petr Kracik, Vasek Chalupnicek
 """
 main lib: github.com/octopusengine/octopuslab/tree/master/esp32-micropython
 ampy -p /COM6 put _projects/solar2/solar2.py main.py
 """
+_ver = "v0.3 - 28.4.2020"
 
 from time import sleep
 from util.pinout import set_pinout
 from util.rgb import Rgb
 from util.button import Button
-from util.octopus import disp7_init
 from util.analog import Analog
 from util.iot import Relay
-from util.octopus import w
+from util.octopus import w, disp7_init
 from machine import Pin, Timer
 # from machine import RTC
 from config import Config
 from util.database.influxdb import InfluxDB
 from gc import mem_free
 
+errorcount = 0
+powerMode = False
+
+print("octopusLab solar regulator: ", _ver)
 
 # --- init ---
 print("--- init --- RAM free: " + str(mem_free()))
@@ -46,25 +50,43 @@ def batt_adc():
     d7.show("")
 
 
-def solar_adc():
+def solar_adc(d7show = True):
+    global powerMode
     valS1 =  anS.get_adc_aver(8)
     print(valS1)
-    d7.show(valS1)
-    sleep(1)
-    d7.show("")
+    if d7show:
+        d7.show(valS1)
+        sleep(1)
+        d7.show("")
 
-    re1.value(0) # on
-    sleep(1)
-    valS2 =  anS.get_adc_aver(8)
-    print(valS2)
-    d7.show(valS2)
-    re1.value(1) # off
-    sleep(1)
-    d7.show("")
-    sleep(1)
+    # if powerMode:
+    if valS1 > 2000: # firstLimit 
+        re1.value(0) # on
+        sleep(1)
+        valS2 =  anS.get_adc_aver(8)
+        print(valS2)
+        if d7show: d7.show(valS2)
+        re1.value(1) # off
+        sleep(1)
+        d7.show("")
+        sleep(1)
+        if valS2 > treshold:
+            re2.value(0)
+            powerMode = True
+        else:
+            re2.value(1)
+            powerMode = False
+        print("powerMode: ", powerMode)
+
+    else: 
+        valS2 = 0
+        re1.value(0)
+        powerMode = False
 
     valSdiff = valS1 - valS2
-    d7.show(valSdiff)
+    if d7show: d7.show(valSdiff)
+
+    send_solar(valS1, valS2)
 
     if valSdiff < treshold:
         ws.color((0,128,0))
@@ -74,6 +96,29 @@ def solar_adc():
     ws.color((0,0,0))
     d7.show("")
     sleep(1)
+
+
+def wait_connect():
+    retry = 0
+    print("Connecing")
+    while not net.sta_if.isconnected():
+        print(".")
+        retry += 1
+        time.sleep(1)
+
+        if retry > 30:
+            break
+
+
+def reconect():
+    global errorcount
+    errorcount+=1
+    if errorcount > 4:
+        machine.reset()
+    else:
+        net.sta_if.disconnect()
+        net.sta_if.connect()
+        wait_connect()
 
 
 def bmp_init():
@@ -87,6 +132,35 @@ def bmp_init():
    return bmp
 
 
+def send_boot():
+    try:
+        print("influx.write: start_boot")
+        influx.write("octopuslab", start_boot = 1)
+    except Exception as e:
+        print("influx send_bme Exception: {0}".format(e))
+
+
+def send_bmp():
+    temp = bmp.temperature
+    press = bmp.pressure
+    
+    try:
+        print("influx.write: ", temp, press)
+        influx.write("octopuslab", temperature = temp, pressure= press)
+    except Exception as e:
+        print("influx send_bme Exception: {0}".format(e))
+        reconect()
+
+
+def send_solar(s20=0,s21=0):
+    try:
+        print("influx.write: ", s20, s21)
+        influx.write("octopuslab", solar20 = s20, solar21 = s21)
+    except Exception as e:
+        print("influx send_solar Exception: {0}".format(e))
+        reconect()
+
+
 minute = 1 # 10
 it = 0 # every 10 sec.
 def timer10s():
@@ -95,9 +169,10 @@ def timer10s():
     print(">" + str(it))
 
     if (it == 6*timer_interval): # 6 = 1min / 60 = 10min
-        print("ok ------------------- 10 min")
-        solar_adc()
+        print("ok --- 10 min")
+        solar_adc(False)
         show_temp()
+        send_bmp()
         it = 0
 
 
@@ -156,15 +231,10 @@ d7.show("")
 print("test: bmp")
 bmp = bmp_init()
 temp = show_temp()
-press = bmp.pressure
-
-w()
-try:
-   print("test influx.write: ", temp, press)
-   influx.write("octopuslab", temperature = temp, pressure= press, solar20 = 123, solar21 = 123, solarBar = 0)
-except Exception as e:
-    print("influx test Exception: {0}".format(e))
-
+net = w()
+send_boot()
+send_bmp()
+solar_adc()
 
 # rtc = RTC() # real time
 tim1 = Timer(0)     # for main 10 sec timer
