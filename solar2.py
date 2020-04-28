@@ -80,7 +80,7 @@ def solar_adc(d7show = True):
 
     else: 
         valS2 = 0
-        re1.value(0)
+        re1.value(1)
         powerMode = False
 
     valSdiff = valS1 - valS2
