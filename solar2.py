@@ -21,6 +21,8 @@ from util.database.influxdb import InfluxDB
 from gc import mem_free
 
 errorcount = 0
+reconnectcount = 0
+
 powerMode = False
 
 print("octopusLab solar regulator: ", _ver)
@@ -98,27 +100,17 @@ def solar_adc(d7show = True):
     sleep(1)
 
 
-def wait_connect():
-    retry = 0
-    print("Connecing")
-    while not net.sta_if.isconnected():
-        print(".")
-        retry += 1
-        time.sleep(1)
-
-        if retry > 30:
-            break
-
-
 def reconect():
     global errorcount
+    global reconnectcount
+
     errorcount+=1
     if errorcount > 4:
         machine.reset()
     else:
         net.sta_if.disconnect()
-        net.sta_if.connect()
-        wait_connect()
+        net.connect()
+        reconnectcount+=1
 
 
 def bmp_init():
@@ -133,30 +125,33 @@ def bmp_init():
 
 
 def send_boot():
-    try:
-        print("influx.write: start_boot")
-        influx.write("octopuslab", start_boot = 1)
-    except Exception as e:
-        print("influx send_bme Exception: {0}".format(e))
+    print("influx.write: start_boot")
+    if influx.write("octopuslab", start_boot = 1):
+        pass
+    else:
+        print("influx send_boot Exception: {0}".format(e))
 
 
 def send_bmp():
+    global errorcount
     temp = bmp.temperature
     press = bmp.pressure
     
-    try:
-        print("influx.write: ", temp, press)
-        influx.write("octopuslab", temperature = temp, pressure= press)
-    except Exception as e:
+    print("influx.write: ", temp, press)
+    if influx.write("octopuslab", temperature = temp, pressure = press):
+        errorcount = 0
+    else:
         print("influx send_bme Exception: {0}".format(e))
         reconect()
 
 
 def send_solar(s20=0,s21=0):
-    try:
-        print("influx.write: ", s20, s21)
-        influx.write("octopuslab", solar20 = s20, solar21 = s21)
-    except Exception as e:
+    global errorcount
+    print("influx.write: ", s20, s21)
+
+    if influx.write("octopuslab", solar20 = s20, solar21 = s21):
+        errorcount = 0
+    else:
         print("influx send_solar Exception: {0}".format(e))
         reconect()
 
